@@ -4,12 +4,23 @@ mod formula;
 mod sat;
 
 fn main() {
-    let f=formula::BooleanFormula::new_default();
-    println!("Default: {:?}",f);
     let string="(1*2)+(-1*2)+(-2*1)+(-1*-2)".to_string();
-    let parsed=formula::BooleanFormula::from_string(string);
+    let parsed=match formula::BooleanFormula::from_string(string){
+        Ok(formula)=>formula,
+        Err(s)=>{
+            println!("Got the following error: {}",s);
+            std::process::exit(1);
+        }
+    };
     println!("Parsed from string: {}",parsed.to_string());
-    let parsed_from_str=formula::BooleanFormula::from_str("((1=2)=(3=4))+1+-(-2*3*-1)+(1=2)");
+    let str="((1=2)=(3=4))+1+-(-2*3*-1)+(1=2)";
+    let parsed_from_str=match formula::BooleanFormula::from_str(str){
+        Ok(formula)=>formula,
+        Err(s)=>{
+            println!("Got the following error: {}",s);
+            std::process::exit(1);
+        }
+    };
     println!("Parsed from str: {}",parsed_from_str.to_string());
     let parsed_nnf=parsed.get_nnf();
     println!("NNF: {}",parsed_nnf.to_string());

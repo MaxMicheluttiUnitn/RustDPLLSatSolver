@@ -11,6 +11,11 @@ pub struct Clause{
     pub literals: HashSet<Literal>
 }
 
+#[derive(Clone,Debug)]
+pub struct TruthAssignment{
+    assignment: HashMap<i32,bool>
+}
+
 #[derive(Debug,Copy,Clone,PartialEq,Hash)]
 pub enum Polarity{Positive, Negative}
 
@@ -58,16 +63,6 @@ impl CNF{
         }
         return false;
     }
-
-    /* pub fn get_variables(&self)->HashSet<i32>{
-        let mut res=HashSet::new();
-        for clause in self.clauses.iter(){
-            for literal in clause.literals.iter(){
-                res.insert(literal.variable);
-            }
-        }
-        return res;
-    } */
 
     pub fn choose_literal(&self)->Literal{
         for clause in self.clauses.iter(){
@@ -130,6 +125,17 @@ impl CNF{
         }
     }
 
+    pub fn simplify_all_pures_and_update_assignment(&mut self,assignment: &mut TruthAssignment){
+        let mut pures=self.get_pures();
+        while !pures.is_empty(){
+            for pure in pures.iter(){
+                assignment.add_assignment_from_literal(&pure);
+                self.simplify_pure_literal(&pure)
+            }
+            pures=self.get_pures();
+        }
+    }
+
     pub fn get_units(&self)->Vec<Literal>{
         let mut res:Vec<Literal>=vec![];
         for i in 0..self.clauses.len(){
@@ -170,6 +176,17 @@ impl CNF{
         let mut units=self.get_units();
         while !units.is_empty(){
             for unit in units.iter(){
+                self.simplify_unit_literal(&unit);
+            }
+            units=self.get_units();
+        }
+    }
+
+    pub fn simplify_all_units_and_update_assignment(&mut self, assignment:&mut TruthAssignment){
+        let mut units=self.get_units();
+        while !units.is_empty(){
+            for unit in units.iter(){
+                assignment.add_assignment_from_literal(&unit);
                 self.simplify_unit_literal(&unit);
             }
             units=self.get_units();
@@ -263,6 +280,50 @@ impl Literal{
     }
 }
 
+impl TruthAssignment{
+    pub fn new()->Self{
+        TruthAssignment{
+            assignment: HashMap::new()
+        }
+    }
+
+    pub fn add_assignment_from_literal(&mut self,l:&Literal){
+        let variable=l.variable;
+        match &l.polarity{
+            Polarity::Positive=>{
+                self.add_assignment(variable, true);
+            },
+            Polarity::Negative=>{
+                self.add_assignment(variable, false);
+            }
+        }
+    }
+
+    pub fn remove_assignment_from_literal(&mut self, l: &Literal){
+        let variable=l.variable;
+        self.remove_assignment(variable);
+    }
+
+    pub fn add_assignment(&mut self,variable:i32,value:bool){
+        self.assignment.insert(variable,value);
+    }
+
+    pub fn get_assignment(&self, variable: i32)->Option<bool>{
+        self.assignment.get(&variable).copied()
+    }
+
+    pub fn remove_assignment(&mut self, variable: i32){
+        self.assignment.remove(&variable);
+    }
+
+    pub fn get_assignment_or_default(&self,variable:i32)->bool{
+        match self.assignment.get(&variable){
+            None=>false,
+            Some(b)=>*b
+        }
+    }
+}
+
 pub fn check_sat_dpll(formula: &BooleanFormula)->bool{
     if formula.is_true(){return true;}
     if formula.is_false(){return false;}
@@ -306,4 +367,49 @@ fn check_sat_dpll_recursive(formula: CNF)->bool{
     }
 }
 
+pub fn check_sat_dpll_and_find_assignment(formula: &BooleanFormula)->Option<TruthAssignment>{
+    let assignment=TruthAssignment::new();
+    if formula.is_true(){return Some(assignment);}
+    if formula.is_false(){return None;}
+    let cnf=CNF::from_boolean_formula(formula);
+    let string_of_cnf=cnf.to_string();
+    println!("Checking satisfiability of equivalent formula in CNF {}",string_of_cnf);
+    match check_sat_dpll_and_find_assignment_recursive(assignment,cnf){
+        Ok(assignment)=>Some(assignment),
+        Err(_)=>None
+    }
+}
 
+fn check_sat_dpll_and_find_assignment_recursive(mut assignment:TruthAssignment,formula: CNF)->Result<TruthAssignment,TruthAssignment>{
+    if formula.is_true(){
+        return Ok(assignment);
+    }
+    if formula.is_false(){
+        return Err(assignment);
+    }
+    if formula.has_unit(){
+        let mut cloned=formula.clone();
+        cloned.simplify_all_units_and_update_assignment(&mut assignment);
+        return check_sat_dpll_and_find_assignment_recursive(assignment,cloned);
+    }
+    if formula.has_pures(){
+        let mut cloned=formula.clone();
+        cloned.simplify_all_pures_and_update_assignment(&mut assignment);
+        return check_sat_dpll_and_find_assignment_recursive(assignment,cloned);
+    }
+    let chosen=formula.choose_literal();
+    let chosen_negation=chosen.not();
+    let mut cloned=formula.clone();
+    cloned.simplify_literal(&chosen);
+    assignment.add_assignment_from_literal(&chosen);
+    match check_sat_dpll_and_find_assignment_recursive(assignment,cloned){
+        Ok(assignment)=>{return Ok(assignment);},
+        Err(mut assignment)=>{
+            assignment.remove_assignment_from_literal(&chosen);
+            cloned=formula.clone();
+            cloned.simplify_literal(&chosen_negation);
+            assignment.add_assignment_from_literal(&chosen_negation);
+            return check_sat_dpll_and_find_assignment_recursive(assignment,cloned);
+        }
+    }
+}
