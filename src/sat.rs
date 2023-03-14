@@ -413,3 +413,14 @@ fn check_sat_dpll_and_find_assignment_recursive(mut assignment:TruthAssignment,f
         }
     }
 }
+
+
+fn check_validity_dpll(formula: &BooleanFormula)->bool{
+    let not_formula=formula.not();
+    return !check_sat_dpll(&not_formula);
+}
+
+fn check_entailment_dpll(f1: &BooleanFormula, f2: &BooleanFormula)->bool{
+    let entailment=f1.entail(f2);
+    return check_validity_dpll(&entailment);
+}

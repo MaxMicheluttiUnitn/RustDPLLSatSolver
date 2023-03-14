@@ -11,7 +11,7 @@ pub struct BooleanFormula{
     string_memory: String
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug)]
 struct Formula{
     root: Node
 }
@@ -60,6 +60,13 @@ impl BooleanFormula{
         return &self.variables
     }
 
+    pub fn not(&self)->Self{
+        let mut string="-(".to_string();
+        string.push_str(&self.string_memory.clone());
+        string.push_str(")");
+        Self::from_string(string).unwrap()
+    }
+
     pub fn update_memory(&mut self){
         self.string_memory=self.root.to_string();
         let popped=self.string_memory.pop();
@@ -74,9 +81,14 @@ impl BooleanFormula{
                     self.string_memory.push(c);
                 }
             }
-        }
-        
-        
+        }       
+    }
+
+    pub fn entail(&self, formula: &BooleanFormula)->Self{
+        let self_cloned=Rc::new(RefCell::new(self.root.clone()));
+        let formula_cloned=Rc::new(RefCell::new(formula.root.clone()));
+        let result=Formula::new(Node::Implies(self_cloned,formula_cloned));
+        Self::from_formula(result)
     }
 
     pub fn from_string(input:String)->Result<Self,String>{
@@ -1913,5 +1925,12 @@ impl Formula{
             _=>{unreachable!();}
         }
         return formula;
+    }
+}
+
+impl Clone for Formula{
+    fn clone(&self)->Self{
+        let string=self.to_string();
+        Self::from_string(string).unwrap()
     }
 }
