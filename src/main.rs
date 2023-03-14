@@ -4,7 +4,7 @@ mod formula;
 mod sat;
 
 fn main() {
-    let string="(1*2)+(-1*2)+(-2*1)+(-1*-2)".to_string();
+    let string="E2.(2+1)*(1<2))=-1".to_string();
     let parsed=match formula::BooleanFormula::from_string(string){
         Ok(formula)=>formula,
         Err(s)=>{
@@ -13,7 +13,7 @@ fn main() {
         }
     };
     println!("Parsed from string: {}",parsed.to_string());
-    let str="((1=2)=(3=4))+1+-(-2*3*-1)+(1=2)";
+    let str="((-10=2)=(3=4))+1+-(-2*3*-1)+(1=2)";
     let parsed_from_str=match formula::BooleanFormula::from_str(str){
         Ok(formula)=>formula,
         Err(s)=>{
@@ -33,5 +33,21 @@ fn main() {
         println!("{} is satisfiable",parsed.to_string());
     }else{
         println!("{} is unsatisfiable",parsed.to_string());
+    }
+    let sat_assigned=sat::check_sat_dpll_and_find_assignment(&parsed);
+    match sat_assigned{
+        Some(assignment)=>{
+            let variables=parsed_cnf.get_variables();
+            println!("Assignment:");
+            for var in variables{
+                let assign=assignment.get_assignment_or_default(*var);
+                if assign{
+                    println!("{}: true",var);
+                }else{
+                    println!("{}: false",var);
+                }
+            }
+        },
+        None=>{println!("{} is unsatisfiable",parsed.to_string());}
     }
 }

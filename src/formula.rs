@@ -56,6 +56,10 @@ impl BooleanFormula{
         self.update_memory();
     }
 
+    pub fn get_variables(&self)->&HashSet<i32>{
+        return &self.variables
+    }
+
     pub fn update_memory(&mut self){
         self.string_memory=self.root.to_string();
         let popped=self.string_memory.pop();
@@ -314,7 +318,7 @@ impl Formula{
         while state!=1{
             *index+=1;
             if *index>=string.len(){
-                panic!("formula not well formatted: size issue!");
+                return Err("Formula not well formatted: Found no character while trying to read an atom!".to_string());
             }
             if state==0{ //starting to read left
                 match *string.get(*index).unwrap(){
@@ -1452,10 +1456,12 @@ impl Formula{
                     Node::Variable(_)=>{done=true;},
                     Node::True=>{new_node=Some(Node::False);done=true;},
                     Node::False=>{new_node=Some(Node::True);done=true;},
-                    _=>{panic!("Unwanted node type while pushing negations");}
+                    _=>{panic!("Unwanted node type while pushing negations 
+                        (remember that this function must always be called after removing quantifiers and implications)");}
                 }
             },
-            _=>{panic!("Unwanted node type while pushing negations");}
+            _=>{panic!("Unwanted node type while pushing negations
+                (remember that this function must always be called after removing quantifiers and implications)");}
         }
         if new_node.is_some(){
             self.root=new_node.unwrap();
@@ -1470,7 +1476,8 @@ impl Formula{
             Node::Not(_)=>{
                 self.push_neg_down();
             },
-            _=>{panic!("Unwanted node type while pushing negations");} 
+            _=>{panic!("Unwanted node type while pushing negations
+                (remember that this function must always be called after removing quantifiers and implications)");} 
         }
     }
 
@@ -1495,11 +1502,13 @@ impl Formula{
             },
             Node::Not(x)=>{
                 match (*x.borrow()).root{
-                    Node::Variable(_)=>{return true;},
+                    Node::Variable(_)|Node::True|Node::False=>{return true;},
                     _=>{return false;}
                 }
             },
-            Node::Variable(_)=>{return true;},
+            Node::Variable(_)|
+            Node::True|
+            Node::False=>{return true;},
             _=>{return false;}
         }
     }
@@ -1856,7 +1865,10 @@ impl Formula{
 
     pub fn to_cnf_representation(&self)->CNF{
         if !self.is_cnf(){
-            panic!("Cannot convert a formula that is not in CNF to list of list!");
+            let string_to_clone=self.to_string();
+            let mut cloned:Formula=Formula::from_string(string_to_clone).unwrap();
+            cloned.make_cnf_label();
+            return cloned.to_cnf_representation();
         }
         let mut formula=CNF::new();
         match &self.root{
