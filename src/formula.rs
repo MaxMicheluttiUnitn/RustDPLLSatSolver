@@ -8,7 +8,6 @@ use crate::sat::{Literal, CNF, Clause};
 pub struct BooleanFormula{
     root: Formula,
     variables: HashSet<i32>,
-    string_memory: String
 }
 
 #[derive(Debug)]
@@ -41,19 +40,17 @@ impl BooleanFormula{
     }
 
     pub fn to_string(&self)->String{
-        self.string_memory.clone()
+        self.root.to_string()
     }
 
     pub fn make_nnf(&mut self){
         self.root.make_nnf();
-        self.variables=self.root.find_variables();
-        self.update_memory();
+        self.update();
     }
 
     pub fn make_cnf_label(&mut self){
         self.root.make_cnf_label();
-        self.variables=self.root.find_variables();
-        self.update_memory();
+        self.update();
     }
 
     pub fn get_variables(&self)->&HashSet<i32>{
@@ -61,27 +58,13 @@ impl BooleanFormula{
     }
 
     pub fn not(&self)->Self{
-        let mut string="-(".to_string();
-        string.push_str(&self.string_memory.clone());
-        string.push_str(")");
-        Self::from_string(string).unwrap()
+        let root_neg=self.root.clone();
+        let res =Formula::new(Node::Not(Rc::new(RefCell::new(root_neg))));
+        Self::from_formula(res)
     }
 
-    pub fn update_memory(&mut self){
-        self.string_memory=self.root.to_string();
-        let popped=self.string_memory.pop();
-        match popped{
-            None=>{},
-            Some(c)=>{
-                if c==')'{
-                    if self.string_memory.len() > 0 {
-                        self.string_memory.remove(0);
-                    }
-                }else{
-                    self.string_memory.push(c);
-                }
-            }
-        }       
+    pub fn update(&mut self){
+        self.variables=self.root.find_variables();       
     }
 
     pub fn entail(&self, formula: &BooleanFormula)->Self{
@@ -104,14 +87,12 @@ impl BooleanFormula{
     }
 
     fn from_formula(formula:Formula)->Self{
-        let variables=formula.find_variables();
-        let string_memory=formula.to_string();
+        let variables=HashSet::new();
         let mut res=BooleanFormula { 
             root: formula,
             variables,
-            string_memory
         };
-        res.update_memory();
+        res.update();
         res
     }
 
@@ -120,12 +101,7 @@ impl BooleanFormula{
     }
 
     pub fn to_cnf_representation(&self)->CNF{
-        if self.root.is_cnf(){
-            self.root.to_cnf_representation()
-        }else{
-            let cnf=self.get_cnf();
-            cnf.to_cnf_representation()
-        }   
+        self.root.to_cnf_representation()
     }
 
     pub fn get_nnf(&self)->Self{
@@ -152,7 +128,7 @@ impl BooleanFormula{
         self.root.remove_quantifiers();
         self.root.simplify_truth();
         self.variables=self.root.find_variables();
-        self.update_memory();
+        self.update();
     }
 
     pub fn without_quantifiers(&self) -> Self{
@@ -164,7 +140,9 @@ impl BooleanFormula{
 
 impl Clone for BooleanFormula{
     fn clone(&self) -> Self{
-        Self::from_string(self.string_memory.clone()).unwrap()
+        let mut res=BooleanFormula { root: self.root.clone(), variables: HashSet::new() };
+        res.update();
+        res
     }
 }
 
@@ -1877,8 +1855,7 @@ impl Formula{
 
     pub fn to_cnf_representation(&self)->CNF{
         if !self.is_cnf(){
-            let string_to_clone=self.to_string();
-            let mut cloned:Formula=Formula::from_string(string_to_clone).unwrap();
+            let mut cloned:Formula=self.clone();
             cloned.make_cnf_label();
             return cloned.to_cnf_representation();
         }
