@@ -175,7 +175,6 @@ impl Formula{
                 Err(s)
             }
         }
-        
     }
 
     fn from_string_at_char(string: &Vec<char>, index: &mut usize) -> Result<Node,String>{
@@ -186,10 +185,13 @@ impl Formula{
             Ok(node)=>node,
             Err(s)=>{return Err(s);}
         };
+        if *index>=string.len(){
+            return Err("Formula not well formatted: opened brackets need to be closed or filled with opeartors!".to_string());
+        }   
         while *string.get(*index).unwrap()==' '{
             *index+=1;
             if *index>=string.len(){
-                return Err("Formula not well formatted: opened brackets followed by nothing are not allowed!".to_string());
+                return Err("Formula not well formatted: opened brackets need to be closed or filled with opeartors!".to_string());
             }    
         }
         let formula= match *string.get(*index).unwrap(){

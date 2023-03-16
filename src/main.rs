@@ -4,7 +4,7 @@ mod formula;
 mod sat;
 
 fn main() {
-    let string="-(((1>2)+-2)>-1)".to_string();
+    let string="-((((-1>2)+-1)>2)".to_string();
     let parsed=match formula::BooleanFormula::from_string(string){
         Ok(formula)=>formula,
         Err(s)=>{
