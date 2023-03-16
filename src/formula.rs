@@ -1378,6 +1378,13 @@ impl Formula{
                     Rc::new(RefCell::new(Formula::new(rightNode)))];
                 new_node=Some(Node::And(full_vec));
             },
+            Node::Not(x)=>{
+                (x.borrow_mut()).remove_impl();
+            },
+            Node::Exists(x,f)|
+            Node::ForEach(x,f)=>{
+                (f.borrow_mut()).remove_impl();
+            }
             _=>{}
         }
         if new_node.is_some(){
@@ -1446,11 +1453,11 @@ impl Formula{
                     Node::Variable(_)=>{done=true;},
                     Node::True=>{new_node=Some(Node::False);done=true;},
                     Node::False=>{new_node=Some(Node::True);done=true;},
-                    _=>{panic!("Unwanted node type while pushing negations 
+                    _=>{panic!("1 - Unwanted node type while pushing negations 
                         (remember that this function must always be called after removing quantifiers and implications)");}
                 }
             },
-            _=>{panic!("Unwanted node type while pushing negations
+            _=>{panic!("2 - Unwanted node type while pushing negations
                 (remember that this function must always be called after removing quantifiers and implications)");}
         }
         if new_node.is_some(){
