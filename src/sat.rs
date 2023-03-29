@@ -328,8 +328,8 @@ pub fn check_sat_dpll(formula: &BooleanFormula)->bool{
     if formula.is_true(){return true;}
     if formula.is_false(){return false;}
     let cnf=CNF::from_boolean_formula(formula);
-    let string_of_cnf=cnf.to_string();
-    println!("Checking satisfiability of equivalent formula in CNF {}",string_of_cnf);
+    /*let string_of_cnf=cnf.to_string();
+    println!("Checking satisfiability of equivalent formula in CNF {}",string_of_cnf);*/
     return check_sat_dpll_recursive(cnf);
 }
 
@@ -372,8 +372,8 @@ pub fn check_sat_dpll_and_find_assignment(formula: &BooleanFormula)->Option<Trut
     if formula.is_true(){return Some(assignment);}
     if formula.is_false(){return None;}
     let cnf=CNF::from_boolean_formula(formula);
-    let string_of_cnf=cnf.to_string();
-    println!("Checking satisfiability of equivalent formula in CNF {}",string_of_cnf);
+    /*let string_of_cnf=cnf.to_string();
+    println!("Checking satisfiability of equivalent formula in CNF {}",string_of_cnf);*/
     match check_sat_dpll_and_find_assignment_recursive(assignment,cnf){
         Ok(assignment)=>Some(assignment),
         Err(_)=>None

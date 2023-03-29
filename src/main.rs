@@ -4,7 +4,8 @@ mod formula;
 mod sat;
 
 fn main() {
-    let string="-((1+2)=-(2*3))".to_string();
+    //let string="-((1+2)=-(2*3))".to_string();
+    let string="T+((-10=E10.20)=(0=4))+1+-(-2*3*-1)+(1=2)+0".to_string();
     let parsed=match formula::BooleanFormula::from_string(string){
         Ok(formula)=>formula,
         Err(s)=>{
@@ -26,6 +27,8 @@ fn main() {
     println!("NNF: {}",parsed_nnf.to_string());
     let parsed_cnf=parsed.get_cnf();
     println!("CNF: {}",parsed_cnf.to_string());
+    let cloned_cnf=parsed_cnf.clone();
+    println!("Cloned CNF: {}",cloned_cnf.to_string());
     let parsed_without_quantifiers=parsed.without_quantifiers();
     println!("Without Quantifiers: {}",parsed_without_quantifiers.to_string());
     /*let sat=sat::check_sat_dpll(&parsed);

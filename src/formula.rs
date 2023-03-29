@@ -117,11 +117,19 @@ impl BooleanFormula{
     }
 
     pub fn is_true(&self)->bool{
-        self.root.is_true()
+        if self.is_cnf(){
+            self.root.is_true()
+        }else{
+            self.get_cnf().is_true()
+        }
     }
 
     pub fn is_false(&self)->bool{
-        self.root.is_false()
+        if self.is_cnf(){
+            self.root.is_false()
+        }else{
+            self.get_cnf().is_false()
+        }
     }
 
     pub fn remove_quantifiers(&mut self){
@@ -1580,6 +1588,23 @@ impl Formula{
                     formula.add_clause(current_clause);
                 }
             },
+            Node::Variable(x)=>{
+                let mut clause=Clause::new();
+                let literal=Literal { variable: *x, polarity: crate::sat::Polarity::Positive };
+                clause.add_literal(literal);
+                formula.add_clause(clause);
+            },
+            Node::Not(x)=>{
+                let mut clause=Clause::new();
+                match &(*x.borrow()).root{
+                    Node::Variable(y)=>{
+                        clause.add_literal(Literal::new(crate::sat::Polarity::Negative,*y));
+                    },
+                    _=>{unreachable!();}
+                }
+                formula.add_clause(clause)
+            },
+            Node::True|Node::False=>{},
             _=>{unreachable!();}
         }
         return formula;
