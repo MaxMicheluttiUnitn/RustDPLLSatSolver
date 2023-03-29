@@ -167,11 +167,17 @@ impl Formula{
         let mut index: usize=0;
         match Self::from_string_at_char(&vec,&mut index){
             Ok(node)=>{
-                let mut res=Formula::new(node);
-                res.simplify_truth();
-                Ok(res)
+                if index==open.len(){
+                    let res=Formula::new(node);
+                    Ok(res)
+                }else{
+                    let res=Formula::new(node);
+                    let str=format!("Formula not well formatted: found extra characters at the end of parsed formula \"{}\"",res.to_string());
+                    Err(str.to_string())
+                }
             },
             Err(s)=>{
+                println!("{} on {}",index, open.len());
                 Err(s)
             }
         }
@@ -179,9 +185,13 @@ impl Formula{
 
     fn from_string_at_char(string: &Vec<char>, index: &mut usize) -> Result<Node,String>{
         if *string.get(*index).unwrap()!='(' {
-            return Err("Formula not well formatted: missing opening brackets!".to_string());
+            let error=format!("Formula not well formatted: missing opening brackets!
+                At position {} of {}
+                Expected \"(\"
+                Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+            return Err(error);
         }
-        let leftFormula=match Self::read_atom(string,index){
+        let left_formula=match Self::read_atom(string,index){
             Ok(node)=>node,
             Err(s)=>{return Err(s);}
         };
@@ -197,11 +207,11 @@ impl Formula{
         let formula= match *string.get(*index).unwrap(){
             ')'=>{
                 *index+=1;
-                return Ok(leftFormula);
+                return Ok(left_formula);
             },
             '+'=>{ // and
                 let mut atom_vec:Vec<Link>=vec![];
-                atom_vec.push(Rc::new(RefCell::new(Formula::new(leftFormula))));
+                atom_vec.push(Rc::new(RefCell::new(Formula::new(left_formula))));
                 loop{
                     let next_atom=match Self::read_atom(string, index){
                         Ok(node)=>node,
@@ -220,13 +230,17 @@ impl Formula{
                     if *string.get(*index).unwrap()==')'{
                         break;
                     }
-                    return Err("Formula not well formatted: Invalid character in sequence of and operators!".to_string());
+                    let error=format!("Formula not well formatted: Invalid character in sequence of and operators!
+                        At position {} of {}
+                        Expected \")\" or \"+\"
+                        Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                    return Err(error);
                 }
                 Node::And(atom_vec)
             },
             '*'=>{ // or
                 let mut atom_vec:Vec<Link>=vec![];
-                atom_vec.push(Rc::new(RefCell::new(Formula::new(leftFormula))));
+                atom_vec.push(Rc::new(RefCell::new(Formula::new(left_formula))));
                 loop{
                     let next_atom=match Self::read_atom(string, index){
                         Ok(node)=>node,
@@ -245,48 +259,56 @@ impl Formula{
                     if *string.get(*index).unwrap()==')'{
                         break;
                     }
-                    return Err("Formula not well formatted: Invalid character in sequence of or operators!".to_string());
+                    let error=format!("Formula not well formatted: Invalid character in sequence of or operators!
+                        At position {} of {}
+                        Expected \")\" or \"*\"
+                        Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                    return Err(error);
                 }
                 Node::Or(atom_vec)
             },
             '%'=>{ // xor
-                let rightFormula=match Self::read_atom(string, index){
+                let right_formula=match Self::read_atom(string, index){
                     Ok(node)=>node,
                     Err(s)=>{return Err(s);}
                 };
                 Node::Xor(
-                    Rc::new(RefCell::new(Formula::new(leftFormula))), 
-                    Rc::new(RefCell::new(Formula::new(rightFormula))))
+                    Rc::new(RefCell::new(Formula::new(left_formula))), 
+                    Rc::new(RefCell::new(Formula::new(right_formula))))
             },
             '<'=>{ // left impl
-                let rightFormula=match Self::read_atom(string, index){
+                let right_formula=match Self::read_atom(string, index){
                     Ok(node)=>node,
                     Err(s)=>{return Err(s);}
                 };
                 Node::IsImpliedBy(
-                    Rc::new(RefCell::new(Formula::new(leftFormula))), 
-                    Rc::new(RefCell::new(Formula::new(rightFormula))))
+                    Rc::new(RefCell::new(Formula::new(left_formula))), 
+                    Rc::new(RefCell::new(Formula::new(right_formula))))
             },
             '>'=>{ // impl
-                let rightFormula=match Self::read_atom(string, index){
+                let right_formula=match Self::read_atom(string, index){
                     Ok(node)=>node,
                     Err(s)=>{return Err(s);}
                 };
                 Node::Implies(
-                    Rc::new(RefCell::new(Formula::new(leftFormula))), 
-                    Rc::new(RefCell::new(Formula::new(rightFormula))))
+                    Rc::new(RefCell::new(Formula::new(left_formula))), 
+                    Rc::new(RefCell::new(Formula::new(right_formula))))
             },
             '='=>{ // iff
-                let rightFormula=match Self::read_atom(string, index){
+                let right_formula=match Self::read_atom(string, index){
                     Ok(node)=>node,
                     Err(s)=>{return Err(s);}
                 };
                 Node::Iff(
-                    Rc::new(RefCell::new(Formula::new(leftFormula))), 
-                    Rc::new(RefCell::new(Formula::new(rightFormula))))
+                    Rc::new(RefCell::new(Formula::new(left_formula))), 
+                    Rc::new(RefCell::new(Formula::new(right_formula))))
             },
             _=>{
-                return Err("Formula not well formatted: invalid operator character found!".to_string());
+                let error=format!("Formula not well formatted: invalid operator found!
+                    At position {} of {}
+                    Expected \"+\" (and) or \"*\" (or) or \">\" (impl) or \"<\" (left impl) or \"=\" (iff) or \"%\" (xor)
+                    Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                return Err(error);
             }
         };
         while *string.get(*index).unwrap()==' '{
@@ -296,534 +318,184 @@ impl Formula{
             }    
         }
         if *string.get(*index).unwrap()!=')'{
-            return Err("Formula not well formatted:expected closed brackets, found something else".to_string());
+            let error=format!("Formula not well formatted: brackets must be closed before starting a new subformula!
+                At position {} of {}
+                Expected \")\"
+                Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+            return Err(error);
         }
         *index+=1;
         return Ok(formula);
 
     }
 
+    fn read_variable_name(string: &Vec<char>, index: &mut usize)->Result<i32,String>{
+        while *string.get(*index).unwrap()==' '{
+            *index+=1;
+            if *index>=string.len(){
+                return Err("Formula not well formatted: Found no character while trying to read a variable!".to_string());
+            }
+        }
+        match *string.get(*index).unwrap(){
+            'f'=>{
+                *index+=1;
+                if *index>=string.len(){
+                    return Err("Formula not well formatted: Found no character while trying to read a fresh variable!".to_string());
+                }
+                return match Self::read_variable_name(string, index){
+                    Ok(v)=>{Ok(-v)},
+                    Err(e)=>{Err(e)}
+                };
+            },
+            '0'=>{
+                *index+=1;
+                if *index>=string.len(){
+                    return Err("Formula not well formatted: Found no character while trying to read a 0 variable!".to_string());
+                }
+                return Ok(0);
+            },
+            '1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'=>{
+                let mut number=*string.get(*index).unwrap() as i32 - '0' as i32;
+                loop{
+                    *index+=1;
+                    if *index>=string.len(){
+                        return Err("Formula not well formatted: Found no character while trying to read an original variable!".to_string());
+                    }
+                    match *string.get(*index).unwrap() {
+                        '0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'=>{
+                            let digit=*string.get(*index).unwrap() as i32 - '0' as i32;
+                            number=number*10+digit;
+                        },
+                        _=>{
+                            break;
+                        }
+                    }
+                }
+                return Ok(number);
+            },
+            _=>{
+                let error=format!("Formula not well formatted: Invalid character found while trying to read a variable!
+                    At position {} of {}
+                    Expected \"f\" or a number
+                    Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                return Err(error);
+            }
+        }
+    }
+
     fn read_atom(string: &Vec<char>, index: &mut usize)->Result<Node,String>{
-        let mut atom=Node::Variable(0);
-        let mut variable_name=0;
-        let mut state=0;
-        while state!=1{
+        *index+=1;
+        if *index>=string.len(){
+            return Err("Formula not well formatted: Found no character while trying to read an atom!".to_string());
+        }
+        while *string.get(*index).unwrap()==' '{
             *index+=1;
             if *index>=string.len(){
                 return Err("Formula not well formatted: Found no character while trying to read an atom!".to_string());
             }
-            if state==0{ //starting to read left
-                match *string.get(*index).unwrap(){
-                    '('=>{
-                        atom=match Formula::from_string_at_char(string, index){
-                            Ok(formula)=>{
-                                formula
-                            },
-                            Err(s)=>{
-                                return Err(s)
-                            }
-                        };
-                        state=1;
-                    },
-                    '-'=>{
-                        state=2;
-                    },
-                    '0'=>{
-                        state=3;
-                    },
-                    '1'=>{
-                        variable_name=variable_name*10+1;
-                        state=3;
-                    },
-                    '2'=>{
-                        variable_name=variable_name*10+2;
-                        state=3;
-                    },
-                    '3'=>{
-                        variable_name=variable_name*10+3;
-                        state=3;
-                    },
-                    '4'=>{
-                        variable_name=variable_name*10+4;
-                        state=3;
-                    },
-                    '5'=>{
-                        variable_name=variable_name*10+5;
-                        state=3;
-                    },
-                    '6'=>{
-                        variable_name=variable_name*10+6;
-                        state=3;
-                    },
-                    '7'=>{
-                        variable_name=variable_name*10+7;
-                        state=3;
-                    },
-                    '8'=>{
-                        variable_name=variable_name*10+8;
-                        state=3;
-                    },
-                    '9'=>{
-                        variable_name=variable_name*10+9;
-                        state=3;
-                    },
-                    'E'=>{
-                        atom=match Formula::read_existential_quantifier(string, index){
-                            Ok(node)=>node,
-                            Err(s)=>{return Err(s);}
-                        };
-                        state=1;
-                    },
-                    'A'=>{
-                        atom=match Formula::read_universal_quantifier(string, index){
-                            Ok(node)=>node,
-                            Err(s)=>{return Err(s);}
-                        };
-                        state=1;
-                    },
-                    'T'=>{
-                        atom=Node::True;
-                        state=5;
-                    },
-                    'F'=>{
-                        atom=Node::True;
-                        state=5;
-                    },
-                    ' '=>{},
-                    _=>{
-                        return Err("Formula not well formatted: Invalid character found in the beginning of an atom!".to_string());
-                    }
-                }
-            }else if state==2{// negation
-                match *string.get(*index).unwrap(){
-                    '('=>{//negated formula
-                        atom=Node::Not(Rc::new(RefCell::new(Formula::new(match Formula::from_string_at_char(string, index){
-                            Ok(formula)=>formula,
-                            Err(s)=>{
-                                return Err(s);
-                            }
-                        }))));
-                        state=1;
-                    },
-                    '-'=>{//double negation (back to start)
-                        state=0;
-                    },
-                    '0'=>{
-                        state=4;
-                    },
-                    '1'=>{
-                        variable_name=variable_name*10+1;
-                        state=4;
-                    },
-                    '2'=>{
-                        variable_name=variable_name*10+2;
-                        state=4;
-                    },
-                    '3'=>{
-                        variable_name=variable_name*10+3;
-                        state=4;
-                    },
-                    '4'=>{
-                        variable_name=variable_name*10+4;
-                        state=4;
-                    },
-                    '5'=>{
-                        variable_name=variable_name*10+5;
-                        state=4;
-                    },
-                    '6'=>{
-                        variable_name=variable_name*10+6;
-                        state=4;
-                    },
-                    '7'=>{
-                        variable_name=variable_name*10+7;
-                        state=4;
-                    },
-                    '8'=>{
-                        variable_name=variable_name*10+8;
-                        state=4;
-                    },
-                    '9'=>{
-                        variable_name=variable_name*10+9;
-                        state=4;
-                    },
-                    'E'=>{
-                        atom=Node::Not(
-                            Rc::new(RefCell::new(Formula::new(
-                            match Formula::read_existential_quantifier(string, index){
-                                Ok(node)=>node,
-                                Err(s)=>{return Err(s);}
-                            }))));
-                        state=1;
-                    },
-                    'A'=>{
-                        atom=Node::Not(
-                            Rc::new(RefCell::new(Formula::new(
-                            match Formula::read_universal_quantifier(string, index){
-                                Ok(node)=>node,
-                                Err(s)=>{return Err(s);}
-                            }))));
-                        state=1;
-                    },
-                    'T'=>{
-                        atom=Node::False;
-                        state=5;
-                    },
-                    'F'=>{
-                        atom=Node::True;
-                        state=5;
-                    },
-                    ' '=>{},
-                    _=>{
-                        return Err("Formula not well formatted: Invalid character found in the beginning of a negated atom!".to_string());
-                    }
-                }
-            }else if state==3{// building pure atom
-                match *string.get(*index).unwrap(){
-                    '0'=>{
-                        variable_name=variable_name*10;
-                    },
-                    '1'=>{
-                        variable_name=variable_name*10+1;
-                    },
-                    '2'=>{
-                        variable_name=variable_name*10+2;
-                    },
-                    '3'=>{
-                        variable_name=variable_name*10+3;
-                    },
-                    '4'=>{
-                        variable_name=variable_name*10+4;
-                    },
-                    '5'=>{
-                        variable_name=variable_name*10+5;
-                    },
-                    '6'=>{
-                        variable_name=variable_name*10+6;
-                    },
-                    '7'=>{
-                        variable_name=variable_name*10+7;
-                    },
-                    '8'=>{
-                        variable_name=variable_name*10+8;
-                    },
-                    '9'=>{
-                        variable_name=variable_name*10+9;
-                    },
-                    ' '|'*'|'+'|'%'|'>'|'<'|'='|')'=>{
-                        atom=Node::Variable(variable_name);
-                        state=1;
-                    },
-                    _=>{
-                        return Err("Formula not well formatted: Invalid character found while building a positive atom!".to_string());
-                    }    
-                }            
-            }else if state==4{// building negative atom
-                match *string.get(*index).unwrap(){
-                    '0'=>{
-                        variable_name=variable_name*10;
-                    },
-                    '1'=>{
-                        variable_name=variable_name*10+1;
-                    },
-                    '2'=>{
-                        variable_name=variable_name*10+2;
-                    },
-                    '3'=>{
-                        variable_name=variable_name*10+3;
-                    },
-                    '4'=>{
-                        variable_name=variable_name*10+4;
-                    },
-                    '5'=>{
-                        variable_name=variable_name*10+5;
-                    },
-                    '6'=>{
-                        variable_name=variable_name*10+6;
-                    },
-                    '7'=>{
-                        variable_name=variable_name*10+7;
-                    },
-                    '8'=>{
-                        variable_name=variable_name*10+8;
-                    },
-                    '9'=>{
-                        variable_name=variable_name*10+9;
-                    },
-                    ' '|'*'|'+'|'%'|'>'|'<'|'='|')'=>{
-                        atom=Node::Not(Rc::new(RefCell::new(Formula::new(Node::Variable(variable_name)))));
-                        state=1;
-                    },
-                    _=>{
-                        return Err("Formula not well formatted: Invalid character found while building a negated atom!".to_string());
-                    }    
-                }
-            }else if state==5{
-                match *string.get(*index).unwrap(){
-                    ' '|'*'|'+'|'%'|'>'|'<'|'='|')'=>{
-                        state=1;
-                    },
-                    _=>{
-                        return Err("Formula not well formatted: Truth value followed by invalid char!".to_string());
-                    }
+        }
+        match *string.get(*index).unwrap() {
+            'f'|'0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'=>{
+                return match Self::read_variable_name(string,index){
+                    Ok(x)=>Ok(Node::Variable(x)),
+                    Err(e)=>Err(e)
                 };
+            },
+            '-'=>{
+                return match Self::read_atom(string,index){
+                    Ok(atom)=>Ok(Node::Not(Rc::new(RefCell::new(Formula::new(atom))))),
+                    Err(e)=>Err(e)
+                };
+            },
+            'A'=>{
+                *index+=1;
+                if *index>=string.len(){
+                    return Err("Formula not well formatted: Found no character while trying to read a universal quantifier!".to_string());
+                }
+                let var= match Self::read_variable_name(string,index){
+                    Ok(x)=>x,
+                    Err(e)=>{return Err(e);}
+                };
+                while *string.get(*index).unwrap()==' '{
+                    *index+=1;
+                    if *index>=string.len(){
+                        return Err("Formula not well formatted: Found no character while trying to read a variable!".to_string());
+                    }
+                }
+                match *string.get(*index).unwrap(){
+                    '.'=>{
+                        let next_atom=match Self::read_atom(string, index){
+                            Ok(atom)=>atom,
+                            Err(e)=>{return Err(e);}
+                        };
+                        return Ok(Node::ForEach(var, Rc::new(RefCell::new(Formula::new(next_atom)))));
+                    },
+                    _=>{
+                        let error=format!("Formula not well formatted: Invalid character found after universal quantifier!
+                            At position {} of {}
+                            Expected \".\"
+                            Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                        return Err(error);
+                    }
+                }
+            },
+            'E'=>{
+                *index+=1;
+                if *index>=string.len(){
+                    return Err("Formula not well formatted: Found no character while trying to read an existential quantifier!".to_string());
+                }
+                let var= match Self::read_variable_name(string,index){
+                    Ok(x)=>x,
+                    Err(e)=>{return Err(e);}
+                };
+                while *string.get(*index).unwrap()==' '{
+                    *index+=1;
+                    if *index>=string.len(){
+                        return Err("Formula not well formatted: Found no character while trying to read a variable!".to_string());
+                    }
+                }
+                match *string.get(*index).unwrap(){
+                    '.'=>{
+                        let next_atom=match Self::read_atom(string, index){
+                            Ok(atom)=>atom,
+                            Err(e)=>{return Err(e);}
+                        };
+                        return Ok(Node::ForEach(var, Rc::new(RefCell::new(Formula::new(next_atom)))));
+                    },
+                    _=>{
+                        let error=format!("Formula not well formatted: Invalid character found after existential quantifier!
+                            At position {} of {}
+                            Expected \".\"
+                            Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                        return Err(error);
+                    }
+                }
+            },
+            'T'=>{
+                *index+=1;
+                if *index>=string.len(){
+                    return Err("Formula not well formatted: Found no character after True atom!".to_string());
+                }
+                return Ok(Node::True);
+            },
+            'F'=>{
+                *index+=1;
+                if *index>=string.len(){
+                    return Err("Formula not well formatted: Found no character after False atom!".to_string());
+                }
+                return Ok(Node::False);
+            },
+            '('=>{
+                return Self::from_string_at_char(string, index);
+            },
+            _=>{
+                let error=format!("Formula not well formatted: Invalid character found in the beginning of an atom!
+                    At position {} of {}
+                    Expected quantifier (A,E) or truth value (T,F) or negation (-) or variable number
+                    Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                return Err(error);
             }
         }
-        Ok(atom)
-    }
-
-    fn read_existential_quantifier(string: &Vec<char>, index: &mut usize)->Result<Node,String>{
-        let mut quantifier=Node::Variable(0);
-        let mut variable_name=0;
-        let mut state=0;
-        while state!=1{
-            *index+=1;
-            if *index>=string.len(){
-                return Err("Formula not well formatted: found existential quantifier followed by nothing".to_string());
-            }
-            if state==0{// reading var in existential quantifier
-                match *string.get(*index).unwrap(){
-                    '0'=>{
-                        variable_name=variable_name*10;
-                        state=2;
-                    },
-                    '1'=>{
-                        variable_name=variable_name*10+1;
-                        state=2;
-                    },
-                    '2'=>{
-                        variable_name=variable_name*10+2;
-                        state=2;
-                    },
-                    '3'=>{
-                        variable_name=variable_name*10+3;
-                        state=2;
-                    },
-                    '4'=>{
-                        variable_name=variable_name*10+4;
-                        state=2;
-                    },
-                    '5'=>{
-                        variable_name=variable_name*10+5;
-                        state=2;
-                    },
-                    '6'=>{
-                        variable_name=variable_name*10+6;
-                        state=2;
-                    },
-                    '7'=>{
-                        variable_name=variable_name*10+7;
-                        state=2;
-                    },
-                    '8'=>{
-                        variable_name=variable_name*10+8;
-                        state=2;
-                    },
-                    '9'=>{
-                        variable_name=variable_name*10+9;
-                        state=2;
-                    },
-                    ' '=>{},
-                    _=>{
-                        return Err("Formula not well formatted: found no variable after existential quantifier".to_string());
-                    }  
-                }
-            }else if state==2{// reading var
-                match *string.get(*index).unwrap(){
-                    '0'=>{
-                        variable_name=variable_name*10;
-                    },
-                    '1'=>{
-                        variable_name=variable_name*10+1;
-                    },
-                    '2'=>{
-                        variable_name=variable_name*10+2;
-                    },
-                    '3'=>{
-                        variable_name=variable_name*10+3;
-                    },
-                    '4'=>{
-                        variable_name=variable_name*10+4;
-                    },
-                    '5'=>{
-                        variable_name=variable_name*10+5;
-                    },
-                    '6'=>{
-                        variable_name=variable_name*10+6;
-                    },
-                    '7'=>{
-                        variable_name=variable_name*10+7;
-                    },
-                    '8'=>{
-                        variable_name=variable_name*10+8;
-                    },
-                    '9'=>{
-                        variable_name=variable_name*10+9;
-                    },
-                    '.'=>{
-                        quantifier=Node::Exists(variable_name, 
-                            Rc::new(RefCell::new(Formula::new(
-                                match Formula::read_atom(string, index){
-                                    Ok(node)=>node,
-                                    Err(s)=>{return Err(s);}
-                                }
-                            ))));
-                        state=1;
-                    },
-                    ' '=>{
-                        state=3;
-                    },
-                    _=>{
-                        return Err("Formula not well formatted: invalid charachter found while reading variable for existential quantifier".to_string());
-                    }  
-                }
-            }else if state==3{// finding dot
-                match *string.get(*index).unwrap(){
-                    '.'=>{
-                        quantifier=Node::Exists(variable_name, 
-                            Rc::new(RefCell::new(Formula::new(
-                                match Formula::read_atom(string, index){
-                                    Ok(node)=>node,
-                                    Err(s)=>{return Err(s);}
-                                }
-                            ))));
-                        state=1;
-                    },
-                    ' '=>{},
-                    _=>{
-                        return Err("Formula not well formatted: found existential quantifier missing point separator".to_string());
-                    }  
-                }
-            }
-        }
-        Ok(quantifier)
-    }
-
-    fn read_universal_quantifier(string: &Vec<char>, index: &mut usize)->Result<Node,String>{
-        let mut quantifier=Node::Variable(0);
-        let mut variable_name=0;
-        let mut state=0;
-        while state!=1{
-            *index+=1;
-            if *index>=string.len(){
-                return Err("Formula not well formatted: found universal quantifier followed by nothing".to_string());
-            }
-            if state==0{// reading var in existential quantifier
-                match *string.get(*index).unwrap(){
-                    '0'=>{
-                        variable_name=variable_name*10;
-                        state=2;
-                    },
-                    '1'=>{
-                        variable_name=variable_name*10+1;
-                        state=2;
-                    },
-                    '2'=>{
-                        variable_name=variable_name*10+2;
-                        state=2;
-                    },
-                    '3'=>{
-                        variable_name=variable_name*10+3;
-                        state=2;
-                    },
-                    '4'=>{
-                        variable_name=variable_name*10+4;
-                        state=2;
-                    },
-                    '5'=>{
-                        variable_name=variable_name*10+5;
-                        state=2;
-                    },
-                    '6'=>{
-                        variable_name=variable_name*10+6;
-                        state=2;
-                    },
-                    '7'=>{
-                        variable_name=variable_name*10+7;
-                        state=2;
-                    },
-                    '8'=>{
-                        variable_name=variable_name*10+8;
-                        state=2;
-                    },
-                    '9'=>{
-                        variable_name=variable_name*10+9;
-                        state=2;
-                    },
-                    ' '=>{},
-                    _=>{
-                        return Err("Formula not well formatted: found no variable after universal quantifier".to_string());
-                    }  
-                }
-            }else if state==2{// reading var
-                match *string.get(*index).unwrap(){
-                    '0'=>{
-                        variable_name=variable_name*10;
-                    },
-                    '1'=>{
-                        variable_name=variable_name*10+1;
-                    },
-                    '2'=>{
-                        variable_name=variable_name*10+2;
-                    },
-                    '3'=>{
-                        variable_name=variable_name*10+3;
-                    },
-                    '4'=>{
-                        variable_name=variable_name*10+4;
-                    },
-                    '5'=>{
-                        variable_name=variable_name*10+5;
-                    },
-                    '6'=>{
-                        variable_name=variable_name*10+6;
-                    },
-                    '7'=>{
-                        variable_name=variable_name*10+7;
-                    },
-                    '8'=>{
-                        variable_name=variable_name*10+8;
-                    },
-                    '9'=>{
-                        variable_name=variable_name*10+9;
-                    },
-                    '.'=>{
-                        quantifier=Node::ForEach(variable_name, 
-                            Rc::new(RefCell::new(Formula::new(
-                                match Formula::read_atom(string, index){
-                                    Ok(node)=>node,
-                                    Err(s)=>{return Err(s);}
-                                }
-                            ))));
-                        state=1;
-                    },
-                    ' '=>{
-                        state=3;
-                    },
-                    _=>{
-                        return Err("Formula not well formatted: invalid charachter found while reading variable for universal quantifier".to_string());
-                    }  
-                }
-            }else if state==3{// finding dot
-                match *string.get(*index).unwrap(){
-                    '.'=>{
-                        quantifier=Node::ForEach(variable_name, 
-                            Rc::new(RefCell::new(Formula::new(
-                                match Formula::read_atom(string, index){
-                                    Ok(node)=>node,
-                                    Err(s)=>{return Err(s);}
-                                }
-                            ))));
-                        state=1;
-                    },
-                    ' '=>{},
-                    _=>{
-                        return Err("Formula not well formatted: found universal quantifier missing point separator".to_string());
-                    }  
-                }
-            }
-        }
-        Ok(quantifier)
     }
 
     pub fn remove_quantifiers(&mut self){
@@ -1329,14 +1001,14 @@ impl Formula{
                 let right_vec=vec![
                     Rc::clone(&a),
                     Rc::new(RefCell::new(Formula::new(Node::Not(Rc::clone(&b)))))];
-                let rightNode=Node::Or(right_vec);
+                let right_node=Node::Or(right_vec);
                 let left_vec=vec![
                     Rc::new(RefCell::new(Formula::new(Node::Not(Rc::clone(&a))))),
                     Rc::clone(&b)];
-                let leftNode=Node::Not(Rc::new(RefCell::new(Formula::new(Node::Or(left_vec)))));
+                let left_node=Node::Not(Rc::new(RefCell::new(Formula::new(Node::Or(left_vec)))));
                 let new_vec=vec![
-                    Rc::new(RefCell::new(Formula::new(leftNode))),
-                    Rc::new(RefCell::new(Formula::new(rightNode))) ];
+                    Rc::new(RefCell::new(Formula::new(left_node))),
+                    Rc::new(RefCell::new(Formula::new(right_node))) ];
                 new_node=Some(Node::And(new_vec));
             },
             Node::Implies(a,b)=>{
@@ -1370,21 +1042,21 @@ impl Formula{
                 let right_vec=vec![
                     Rc::clone(&a),
                     Rc::new(RefCell::new(Formula::new(Node::Not(Rc::clone(&b)))))];
-                let rightNode=Node::Or(right_vec);
+                let right_node=Node::Or(right_vec);
                 let left_vec=vec![
                     Rc::new(RefCell::new(Formula::new(Node::Not(Rc::clone(&a))))),
                     Rc::clone(&b)];
-                let leftNode=Node::Or(left_vec);
+                let left_node=Node::Or(left_vec);
                 let full_vec=vec![
-                    Rc::new(RefCell::new(Formula::new(leftNode))),
-                    Rc::new(RefCell::new(Formula::new(rightNode)))];
+                    Rc::new(RefCell::new(Formula::new(left_node))),
+                    Rc::new(RefCell::new(Formula::new(right_node)))];
                 new_node=Some(Node::And(full_vec));
             },
             Node::Not(x)=>{
                 (x.borrow_mut()).remove_impl();
             },
-            Node::Exists(x,f)|
-            Node::ForEach(x,f)=>{
+            Node::Exists(_x,f)|
+            Node::ForEach(_x,f)=>{
                 (f.borrow_mut()).remove_impl();
             }
             _=>{}
