@@ -1604,7 +1604,6 @@ impl Formula{
                 }
                 formula.add_clause(clause)
             },
-            Node::True|Node::False=>{},
             _=>{unreachable!();}
         }
         return formula;
