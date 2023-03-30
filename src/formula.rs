@@ -350,10 +350,34 @@ impl Formula{
                 if *index>=string.len(){
                     return Err("Formula not well formatted: Found no character while trying to read a fresh variable!".to_string());
                 }
-                return match Self::read_variable_name(string, index){
-                    Ok(v)=>{Ok(-v)},
-                    Err(e)=>{Err(e)}
-                };
+                match *string.get(*index).unwrap(){
+                    '1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'=>{
+                        let mut number=*string.get(*index).unwrap() as i32 - '0' as i32;
+                        loop{
+                            *index+=1;
+                            if *index>=string.len(){
+                                return Err("Formula not well formatted: Found no character while trying to read a fresh variable!".to_string());
+                            }
+                            match *string.get(*index).unwrap() {
+                                '0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'=>{
+                                    let digit=*string.get(*index).unwrap() as i32 - '0' as i32;
+                                    number=number*10+digit;
+                                },
+                                _=>{
+                                    break;
+                                }
+                            }
+                        }
+                        return Ok(-number);
+                    },
+                    _=>{
+                        let error=format!("Formula not well formatted: Invalid character found while trying to read a fresh variable!
+                            At position {} of {}
+                            Expected a number
+                            Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                        return Err(error);
+                    }
+                }
             },
             '0'=>{
                 *index+=1;
