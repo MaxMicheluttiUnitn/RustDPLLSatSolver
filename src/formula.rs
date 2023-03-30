@@ -241,8 +241,9 @@ impl Formula{
                     }
                     let error=format!("Formula not well formatted: Invalid character in sequence of and operators!
                         At position {} of {}
-                        Expected \")\" or \"+\"
-                        Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                        Expected \")\" or \"{}\"
+                        Found \"{}\" instead",*index,string.into_iter().collect::<String>(),
+                        AND_OPERATOR_SYMBOL,*string.get(*index).unwrap());
                     return Err(error);
                 }
                 Node::And(atom_vec)
@@ -270,8 +271,9 @@ impl Formula{
                     }
                     let error=format!("Formula not well formatted: Invalid character in sequence of or operators!
                         At position {} of {}
-                        Expected \")\" or \"*\"
-                        Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                        Expected \")\" or \"{}\"
+                        Found \"{}\" instead",*index,string.into_iter().collect::<String>(),
+                        OR_OPERATOR_SYMBOL,*string.get(*index).unwrap());
                     return Err(error);
                 }
                 Node::Or(atom_vec)
