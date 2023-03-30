@@ -1211,6 +1211,10 @@ impl Formula{
             return;
         }
         self.make_nnf();
+        // sometimes making the formula in NNF might already make it in cnf
+        if self.is_cnf(){
+            return;
+        }
         self.cnf_label();
         self.flatten();
     }

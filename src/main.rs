@@ -6,7 +6,7 @@ mod operators;
 
 fn main() {
     //let string="-((1+2)=-(2*3))".to_string();
-    let string="-(T+((-10=E10.20)=(0=4))+1+-(-2*3*-1)+(1=2)+0)".to_string();
+    let string="-((--10))".to_string();
     let parsed=match formula::BooleanFormula::from_string(string){
         Ok(formula)=>formula,
         Err(s)=>{
@@ -41,6 +41,7 @@ fn main() {
     let sat_assigned=sat::check_sat_dpll_and_find_assignment(&parsed);
     match sat_assigned{
         Some(assignment)=>{
+            println!("{} is satisfiable",parsed);
             let variables=parsed_cnf.get_variables();
             println!("Assignment:");
             for var in variables{
