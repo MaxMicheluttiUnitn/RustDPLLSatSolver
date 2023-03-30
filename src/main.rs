@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 mod formula;
 mod sat;
+mod operators;
 
 fn main() {
     //let string="-((1+2)=-(2*3))".to_string();

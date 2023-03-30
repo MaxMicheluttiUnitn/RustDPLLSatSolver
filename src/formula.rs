@@ -3,6 +3,7 @@ use std::rc::Rc;
 use std::collections::HashSet;
 
 use crate::sat::{Literal, CNF, Clause};
+use crate::operators::{*};
 
 #[derive(Debug)]
 pub struct BooleanFormula{
@@ -217,7 +218,7 @@ impl Formula{
                 *index+=1;
                 return Ok(left_formula);
             },
-            '+'=>{ // and
+            AND_OPERATOR_SYMBOL=>{ // and
                 let mut atom_vec:Vec<Link>=vec![];
                 atom_vec.push(Rc::new(RefCell::new(Formula::new(left_formula))));
                 loop{
@@ -232,7 +233,7 @@ impl Formula{
                             return Err("Formula not well formatted: and operator needs to be closed or continued!".to_string());
                         }    
                     }
-                    if *string.get(*index).unwrap()=='+'{
+                    if *string.get(*index).unwrap()==AND_OPERATOR_SYMBOL{
                         continue;
                     }
                     if *string.get(*index).unwrap()==')'{
@@ -246,7 +247,7 @@ impl Formula{
                 }
                 Node::And(atom_vec)
             },
-            '*'=>{ // or
+            OR_OPERATOR_SYMBOL=>{ // or
                 let mut atom_vec:Vec<Link>=vec![];
                 atom_vec.push(Rc::new(RefCell::new(Formula::new(left_formula))));
                 loop{
@@ -261,7 +262,7 @@ impl Formula{
                             return Err("Formula not well formatted: or operator needs to be closed or continued!".to_string());
                         }    
                     }
-                    if *string.get(*index).unwrap()=='*'{
+                    if *string.get(*index).unwrap()==OR_OPERATOR_SYMBOL{
                         continue;
                     }
                     if *string.get(*index).unwrap()==')'{
@@ -275,7 +276,7 @@ impl Formula{
                 }
                 Node::Or(atom_vec)
             },
-            '%'=>{ // xor
+            XOR_OPERATOR_SYMBOL=>{ // xor
                 let right_formula=match Self::read_atom(string, index){
                     Ok(node)=>node,
                     Err(s)=>{return Err(s);}
@@ -284,7 +285,7 @@ impl Formula{
                     Rc::new(RefCell::new(Formula::new(left_formula))), 
                     Rc::new(RefCell::new(Formula::new(right_formula))))
             },
-            '<'=>{ // left impl
+            LEFT_IMPL_OPERATOR_SYMBOL=>{ // left impl
                 let right_formula=match Self::read_atom(string, index){
                     Ok(node)=>node,
                     Err(s)=>{return Err(s);}
@@ -293,7 +294,7 @@ impl Formula{
                     Rc::new(RefCell::new(Formula::new(left_formula))), 
                     Rc::new(RefCell::new(Formula::new(right_formula))))
             },
-            '>'=>{ // impl
+            IMPL_OPERATOR_SYMBOL=>{ // impl
                 let right_formula=match Self::read_atom(string, index){
                     Ok(node)=>node,
                     Err(s)=>{return Err(s);}
@@ -302,7 +303,7 @@ impl Formula{
                     Rc::new(RefCell::new(Formula::new(left_formula))), 
                     Rc::new(RefCell::new(Formula::new(right_formula))))
             },
-            '='=>{ // iff
+            IFF_OPERATOR_SYMBOL=>{ // iff
                 let right_formula=match Self::read_atom(string, index){
                     Ok(node)=>node,
                     Err(s)=>{return Err(s);}
@@ -314,8 +315,11 @@ impl Formula{
             _=>{
                 let error=format!("Formula not well formatted: invalid operator found!
                     At position {} of {}
-                    Expected \"+\" (and) or \"*\" (or) or \">\" (impl) or \"<\" (left impl) or \"=\" (iff) or \"%\" (xor)
-                    Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                    Expected \"{}\" (and) or \"{}\" (or) or \"{}\" (impl) or \"{}\" (left impl) or \"{}\" (iff) or \"{}\" (xor)
+                    Found \"{}\" instead",
+                    *index,string.into_iter().collect::<String>(),
+                    AND_OPERATOR_SYMBOL,OR_OPERATOR_SYMBOL,IMPL_OPERATOR_SYMBOL,LEFT_IMPL_OPERATOR_SYMBOL,IFF_OPERATOR_SYMBOL,XOR_OPERATOR_SYMBOL,
+                    *string.get(*index).unwrap());
                 return Err(error);
             }
         };
@@ -345,7 +349,7 @@ impl Formula{
             }
         }
         match *string.get(*index).unwrap(){
-            'f'=>{
+            FRESH_VARIABLE_SYMBOL=>{
                 *index+=1;
                 if *index>=string.len(){
                     return Err("Formula not well formatted: Found no character while trying to read a fresh variable!".to_string());
@@ -408,8 +412,9 @@ impl Formula{
             _=>{
                 let error=format!("Formula not well formatted: Invalid character found while trying to read a variable!
                     At position {} of {}
-                    Expected \"f\" or a number
-                    Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                    Expected \"{}\" or a number
+                    Found \"{}\" instead",*index,string.into_iter().collect::<String>(),
+                    FRESH_VARIABLE_SYMBOL,*string.get(*index).unwrap());
                 return Err(error);
             }
         }
@@ -427,19 +432,19 @@ impl Formula{
             }
         }
         match *string.get(*index).unwrap() {
-            'f'|'0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'=>{
+            FRESH_VARIABLE_SYMBOL|'0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'=>{
                 return match Self::read_variable_name(string,index){
                     Ok(x)=>Ok(Node::Variable(x)),
                     Err(e)=>Err(e)
                 };
             },
-            '-'=>{
+            NEGATION_OPERATOR_SYMBOL=>{
                 return match Self::read_atom(string,index){
                     Ok(atom)=>Ok(Node::Not(Rc::new(RefCell::new(Formula::new(atom))))),
                     Err(e)=>Err(e)
                 };
             },
-            'A'=>{
+            UNIVERSAL_QUANTIFIER_SYMBOL=>{
                 *index+=1;
                 if *index>=string.len(){
                     return Err("Formula not well formatted: Found no character while trying to read a universal quantifier!".to_string());
@@ -455,7 +460,7 @@ impl Formula{
                     }
                 }
                 match *string.get(*index).unwrap(){
-                    '.'=>{
+                    QUANTIFIER_SEPARATOR_SYMBOL=>{
                         let next_atom=match Self::read_atom(string, index){
                             Ok(atom)=>atom,
                             Err(e)=>{return Err(e);}
@@ -465,13 +470,14 @@ impl Formula{
                     _=>{
                         let error=format!("Formula not well formatted: Invalid character found after universal quantifier!
                             At position {} of {}
-                            Expected \".\"
-                            Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                            Expected \"{}\"
+                            Found \"{}\" instead",*index,string.into_iter().collect::<String>(),
+                            QUANTIFIER_SEPARATOR_SYMBOL,*string.get(*index).unwrap());
                         return Err(error);
                     }
                 }
             },
-            'E'=>{
+            EXISTENTIAL_QUANTIFIER_SYMBOL=>{
                 *index+=1;
                 if *index>=string.len(){
                     return Err("Formula not well formatted: Found no character while trying to read an existential quantifier!".to_string());
@@ -487,7 +493,7 @@ impl Formula{
                     }
                 }
                 match *string.get(*index).unwrap(){
-                    '.'=>{
+                    QUANTIFIER_SEPARATOR_SYMBOL=>{
                         let next_atom=match Self::read_atom(string, index){
                             Ok(atom)=>atom,
                             Err(e)=>{return Err(e);}
@@ -497,20 +503,21 @@ impl Formula{
                     _=>{
                         let error=format!("Formula not well formatted: Invalid character found after existential quantifier!
                             At position {} of {}
-                            Expected \".\"
-                            Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                            Expected \"{}\"
+                            Found \"{}\" instead",*index,string.into_iter().collect::<String>(),
+                            QUANTIFIER_SEPARATOR_SYMBOL,*string.get(*index).unwrap());
                         return Err(error);
                     }
                 }
             },
-            'T'=>{
+            TRUE_ATOM_SYMBOL=>{
                 *index+=1;
                 if *index>=string.len(){
                     return Err("Formula not well formatted: Found no character after True atom!".to_string());
                 }
                 return Ok(Node::True);
             },
-            'F'=>{
+            FALSE_ATOM_SYMBOL=>{
                 *index+=1;
                 if *index>=string.len(){
                     return Err("Formula not well formatted: Found no character after False atom!".to_string());
@@ -523,8 +530,11 @@ impl Formula{
             _=>{
                 let error=format!("Formula not well formatted: Invalid character found in the beginning of an atom!
                     At position {} of {}
-                    Expected quantifier (A,E) or truth value (T,F) or negation (-) or variable number
-                    Found \"{}\" instead",*index,string.into_iter().collect::<String>(),*string.get(*index).unwrap());
+                    Expected quantifier ({},{}) or truth value ({},{}) or negation ({}) or variable number
+                    Found \"{}\" instead",*index,string.into_iter().collect::<String>(),
+                    EXISTENTIAL_QUANTIFIER_SYMBOL,UNIVERSAL_QUANTIFIER_SYMBOL,
+                    TRUE_ATOM_SYMBOL,FALSE_ATOM_SYMBOL,
+                    NEGATION_OPERATOR_SYMBOL,*string.get(*index).unwrap());
                 return Err(error);
             }
         }
@@ -1458,23 +1468,23 @@ impl Formula{
                     res.push_str(&str_var);
                 }else{
                     let y=-*x;
-                    res.push_str("f");
+                    res.push(FRESH_VARIABLE_SYMBOL);
                     let str_var=y.to_string();
                     res.push_str(&str_var);
                 }
             },
             Node::True=>{
-                res.push_str("T");
+                res.push(TRUE_ATOM_SYMBOL);
             },
             Node::False=>{
-                res.push_str("F");
+                res.push(FALSE_ATOM_SYMBOL);
             },
             Node::And(vec)=>{
                 res.push_str("(");
                 for i in 0..(vec.len()-1){
                     let token=(vec.get(i).unwrap().borrow()).to_string();
                     res.push_str(&token);
-                    res.push_str("+");
+                    res.push(AND_OPERATOR_SYMBOL);
                 }
                 let token=(vec.get(vec.len()-1).unwrap().borrow()).to_string();
                 res.push_str(&token);
@@ -1485,7 +1495,7 @@ impl Formula{
                 for i in 0..(vec.len()-1){
                     let token=(vec.get(i).unwrap().borrow()).to_string();
                     res.push_str(&token);
-                    res.push_str("*");
+                    res.push(OR_OPERATOR_SYMBOL);
                 }
                 let token=(vec.get(vec.len()-1).unwrap().borrow()).to_string();
                 res.push_str(&token);
@@ -1495,7 +1505,7 @@ impl Formula{
                 res.push_str("(");
                 let left_str=(a.borrow()).to_string();
                 res.push_str(&left_str);
-                res.push_str("%");
+                res.push(XOR_OPERATOR_SYMBOL);
                 let right_str=(b.borrow()).to_string();
                 res.push_str(&right_str);
                 res.push_str(")");
@@ -1504,7 +1514,7 @@ impl Formula{
                 res.push_str("(");
                 let left_str=(a.borrow()).to_string();
                 res.push_str(&left_str);
-                res.push_str("=");
+                res.push(IFF_OPERATOR_SYMBOL);
                 let right_str=(b.borrow()).to_string();
                 res.push_str(&right_str);
                 res.push_str(")");
@@ -1513,7 +1523,7 @@ impl Formula{
                 res.push_str("(");
                 let left_str=(a.borrow()).to_string();
                 res.push_str(&left_str);
-                res.push_str(">");
+                res.push(IMPL_OPERATOR_SYMBOL);
                 let right_str=(b.borrow()).to_string();
                 res.push_str(&right_str);
                 res.push_str(")");
@@ -1522,43 +1532,43 @@ impl Formula{
                 res.push_str("(");
                 let left_str=(a.borrow()).to_string();
                 res.push_str(&left_str);
-                res.push_str("<");
+                res.push(LEFT_IMPL_OPERATOR_SYMBOL);
                 let right_str=(b.borrow()).to_string();
                 res.push_str(&right_str);
                 res.push_str(")");
             },
             Node::Not(a)=>{
-                res.push_str("-");
+                res.push(NEGATION_OPERATOR_SYMBOL);
                 let for_str=(a.borrow()).to_string();
                 res.push_str(&for_str);
             },
             Node::Exists(x,f)=>{
-                res.push_str("E");
+                res.push(EXISTENTIAL_QUANTIFIER_SYMBOL);
                 if *x>=0{
                     let str_var=x.to_string();
                     res.push_str(&str_var);
                 }else{
                     let y=-*x;
-                    res.push_str("f");
+                    res.push(FRESH_VARIABLE_SYMBOL);
                     let str_var=y.to_string();
                     res.push_str(&str_var);
                 }
-                res.push_str(".");
+                res.push(QUANTIFIER_SEPARATOR_SYMBOL);
                 let formula_string=(*f.borrow()).to_string();
                 res.push_str(&formula_string);
             },
             Node::ForEach(x,f)=>{
-                res.push_str("A");
+                res.push(UNIVERSAL_QUANTIFIER_SYMBOL);
                 if *x>=0{
                     let str_var=x.to_string();
                     res.push_str(&str_var);
                 }else{
                     let y=-*x;
-                    res.push_str("f");
+                    res.push(FRESH_VARIABLE_SYMBOL);
                     let str_var=y.to_string();
                     res.push_str(&str_var);
                 }
-                res.push_str(".");
+                res.push(QUANTIFIER_SEPARATOR_SYMBOL);
                 let formula_string=(*f.borrow()).to_string();
                 res.push_str(&formula_string);
             }
