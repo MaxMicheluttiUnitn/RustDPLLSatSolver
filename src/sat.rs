@@ -1,4 +1,4 @@
-use crate::formula::BooleanFormula;
+use crate::{formula::BooleanFormula, operators::{NEGATION_OPERATOR_SYMBOL, FRESH_VARIABLE_SYMBOL, OR_OPERATOR_SYMBOL, AND_OPERATOR_SYMBOL}};
 use std::collections::{HashSet,HashMap};
 
 #[derive(Debug,Clone)]
@@ -204,7 +204,7 @@ impl CNF{
             let clause_str=clause.to_string();
             res.push_str(&clause_str);
             res.push_str(")");
-            res.push_str("+");
+            res.push(AND_OPERATOR_SYMBOL);
         }
         res.pop();
         return res;
@@ -250,7 +250,7 @@ impl Clause{
         let mut res="".to_string();
         for literal in self.literals.iter(){
             if literal.polarity==Polarity::Negative{
-                res.push_str("-")
+                res.push(NEGATION_OPERATOR_SYMBOL)
             }
             let x=literal.variable;
             if x>=0{
@@ -258,11 +258,11 @@ impl Clause{
                 res.push_str(&str_var);
             }else{
                 let y=-x;
-                res.push_str("f");
+                res.push(FRESH_VARIABLE_SYMBOL);
                 let str_var=y.to_string();
                 res.push_str(&str_var);
             }
-            res.push_str("*");
+            res.push(OR_OPERATOR_SYMBOL);
         }
         res.pop();
         return res;
