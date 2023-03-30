@@ -14,7 +14,7 @@ fn main() {
         }
     };
     println!("Parsed from string: {}",parsed.to_string());
-    let str="T+((-10=E10.20)=(0=4))+1+-(-2*3*-1)+(1=2)+F+0";
+    let str="T*(T+((-10=E10.20)=(0=4))+1+-(-2*3*-1)+(1=2)+F+0)*12";
     let parsed_from_str=match formula::BooleanFormula::from_str(str){
         Ok(formula)=>formula,
         Err(s)=>{

@@ -1522,7 +1522,7 @@ impl Formula{
                 res.push_str("(");
                 let left_str=(a.borrow()).to_string();
                 res.push_str(&left_str);
-                res.push_str("+");
+                res.push_str("<");
                 let right_str=(b.borrow()).to_string();
                 res.push_str(&right_str);
                 res.push_str(")");
