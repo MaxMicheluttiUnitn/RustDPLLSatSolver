@@ -1703,7 +1703,7 @@ mod test_parsing{
     use super::*;
 
     #[test]
-    pub fn lone_variable(){
+    fn lone_variable(){
         let expected=format!("{:?}",Formula::new(Node::Variable(0)));
         let formula=Formula::from_string("0".to_string()).unwrap();
         let gotten=format!("{:?}",formula);
@@ -1711,7 +1711,7 @@ mod test_parsing{
     }
 
     #[test]
-    pub fn lone_negated_variable(){
+    fn lone_negated_variable(){
         let expected=format!("{:?}",Formula::new(Node::Not(Rc::new(RefCell::new(Formula::new(Node::Variable(0)))))));
         let string=format!("{}0",NEGATION_OPERATOR_SYMBOL);
         let formula=Formula::from_string(string).unwrap();
@@ -1720,7 +1720,7 @@ mod test_parsing{
     }
 
     #[test]
-    pub fn lone_universal_quantifier(){
+    fn lone_universal_quantifier(){
         let expected=format!("{:?}",Formula::new(Node::ForEach(
             0,
             Rc::new(RefCell::new(Formula::new(Node::Variable(0)))),
@@ -1732,7 +1732,7 @@ mod test_parsing{
     }
 
     #[test]
-    pub fn universal_quantifier_with_formula(){
+    fn universal_quantifier_with_formula(){
         let expected=format!("{:?}",Formula::new(Node::ForEach(
             0,
             Rc::new(RefCell::new(Formula::new(Node::Iff(
@@ -1747,7 +1747,7 @@ mod test_parsing{
     }
 
     #[test]
-    pub fn lone_existential_quantifier(){
+    fn lone_existential_quantifier(){
         let expected=format!("{:?}",Formula::new(Node::Exists(
             0,
             Rc::new(RefCell::new(Formula::new(Node::Variable(0)))),
@@ -1759,7 +1759,7 @@ mod test_parsing{
     }
 
     #[test]
-    pub fn existential_quantifier_with_formula(){
+    fn existential_quantifier_with_formula(){
         let expected=format!("{:?}",Formula::new(Node::Exists(
             0,
             Rc::new(RefCell::new(Formula::new(Node::Iff(
@@ -1774,7 +1774,7 @@ mod test_parsing{
     }
 
     #[test]
-    pub fn and_operator(){
+    fn and_operator(){
         let expected=format!("{:?}",Formula::new(Node::And(
             vec![Rc::new(RefCell::new(Formula::new(Node::Variable(0)))),
             Rc::new(RefCell::new(Formula::new(Node::Variable(1)))),
@@ -1787,7 +1787,7 @@ mod test_parsing{
     }
 
     #[test]
-    pub fn or_operator(){
+    fn or_operator(){
         let expected=format!("{:?}",Formula::new(Node::Or(
             vec![Rc::new(RefCell::new(Formula::new(Node::Variable(0)))),
             Rc::new(RefCell::new(Formula::new(Node::Variable(1)))),
@@ -1800,7 +1800,7 @@ mod test_parsing{
     }
 
     #[test]
-    pub fn xor_operator(){
+    fn xor_operator(){
         let expected=format!("{:?}",Formula::new(Node::Xor(
             Rc::new(RefCell::new(Formula::new(Node::Variable(0)))),
             Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
@@ -1812,7 +1812,7 @@ mod test_parsing{
     }
 
     #[test]
-    pub fn impl_operator(){
+    fn impl_operator(){
         let expected=format!("{:?}",Formula::new(Node::Implies(
             Rc::new(RefCell::new(Formula::new(Node::Variable(0)))),
             Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
@@ -1824,7 +1824,7 @@ mod test_parsing{
     }
 
     #[test]
-    pub fn left_impl_operator(){
+    fn left_impl_operator(){
         let expected=format!("{:?}",Formula::new(Node::IsImpliedBy(
             Rc::new(RefCell::new(Formula::new(Node::Variable(0)))),
             Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
@@ -1836,7 +1836,7 @@ mod test_parsing{
     }
 
     #[test]
-    pub fn iff_operator(){
+    fn iff_operator(){
         let expected=format!("{:?}",Formula::new(Node::Iff(
             Rc::new(RefCell::new(Formula::new(Node::Variable(0)))),
             Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
@@ -1847,5 +1847,346 @@ mod test_parsing{
         assert_eq!(gotten,expected);
     }
 
+    #[test]
+    fn nested_formula(){
+        let expected=format!("{:?}",Formula::new(Node::Iff(
+            Rc::new(RefCell::new(Formula::new(Node::And(
+                vec![
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(0)))),
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
+                ]
+            )))),
+            Rc::new(RefCell::new(Formula::new(Node::ForEach(
+                1,
+                Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
+            ))))
+        )));
+        let string=format!("(0{}1){}{}1{}1",AND_OPERATOR_SYMBOL,IFF_OPERATOR_SYMBOL,UNIVERSAL_QUANTIFIER_SYMBOL,QUANTIFIER_SEPARATOR_SYMBOL);
+        let formula=Formula::from_string(string).unwrap();
+        let gotten=format!("{:?}",formula);
+        assert_eq!(gotten,expected);
+    }
 
+    #[test]
+    fn nested_formula_with_too_many_parenthesis(){
+        let expected=format!("{:?}",Formula::new(Node::Iff(
+            Rc::new(RefCell::new(Formula::new(Node::And(
+                vec![
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(0)))),
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
+                ]
+            )))),
+            Rc::new(RefCell::new(Formula::new(Node::ForEach(
+                1,
+                Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
+            ))))
+        )));
+        let string=format!("(((0{}(1))){}({}1{}1))",AND_OPERATOR_SYMBOL,IFF_OPERATOR_SYMBOL,UNIVERSAL_QUANTIFIER_SYMBOL,QUANTIFIER_SEPARATOR_SYMBOL);
+        let formula=Formula::from_string(string).unwrap();
+        let gotten=format!("{:?}",formula);
+        assert_eq!(gotten,expected);
+    }
+
+    #[test]
+    fn nested_formula_with_blank_spaces(){
+        let expected=format!("{:?}",Formula::new(Node::Iff(
+            Rc::new(RefCell::new(Formula::new(Node::And(
+                vec![
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(0)))),
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
+                ]
+            )))),
+            Rc::new(RefCell::new(Formula::new(Node::ForEach(
+                1,
+                Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
+            ))))
+        )));
+        let string=format!("    ( 0 {}  1) {} {} 1{} 1   ",AND_OPERATOR_SYMBOL,IFF_OPERATOR_SYMBOL,UNIVERSAL_QUANTIFIER_SYMBOL,QUANTIFIER_SEPARATOR_SYMBOL);
+        let formula=Formula::from_string(string).unwrap();
+        let gotten=format!("{:?}",formula);
+        assert_eq!(gotten,expected);
+    }
+
+    #[test]
+    fn multiple_negations(){
+        let expected=format!("{:?}",
+            Formula::new(Node::Not(
+                Rc::new(RefCell::new(Formula::new(Node::Not(
+                    Rc::new(RefCell::new(Formula::new(Node::Not(
+                        Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
+                    )))),
+                ))))
+            )));
+        let string=format!("{}{}{}1",NEGATION_OPERATOR_SYMBOL,NEGATION_OPERATOR_SYMBOL,NEGATION_OPERATOR_SYMBOL);
+        let formula=Formula::from_string(string).unwrap();
+        let gotten=format!("{:?}",formula);
+        assert_eq!(gotten,expected);
+    }
+
+    #[test]
+    fn lone_fresh_variable(){
+        let expected=format!("{:?}",Formula::new(Node::Variable(-1)));
+        let string=format!("{}1",FRESH_VARIABLE_SYMBOL);
+        let formula=Formula::from_string(string).unwrap();
+        let gotten=format!("{:?}",formula);
+        assert_eq!(gotten,expected);
+    }
+
+    #[test]
+    fn quantifier_without_separator(){
+        let string=format!("{}1(1{}2)",EXISTENTIAL_QUANTIFIER_SYMBOL,AND_OPERATOR_SYMBOL);
+        let error=Formula::from_string(string);
+        assert!(error.is_err());
+    }
+
+    #[test]
+    fn mixture_of_and_plus_or_operators(){
+        let string=format!("0{}1{}2{}3",OR_OPERATOR_SYMBOL,AND_OPERATOR_SYMBOL,AND_OPERATOR_SYMBOL);
+        let error=Formula::from_string(string);
+        assert!(error.is_err());
+    }
+
+    #[test]
+    fn nested_quantifiers(){
+        let expected=format!("{:?}",Formula::new(Node::ForEach(
+            1,
+            Rc::new(RefCell::new(Formula::new(Node::Exists(
+                2,
+                Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
+            ))))
+        )));
+        let string=format!("{}1{}{}2{}1",UNIVERSAL_QUANTIFIER_SYMBOL,QUANTIFIER_SEPARATOR_SYMBOL,EXISTENTIAL_QUANTIFIER_SYMBOL,QUANTIFIER_SEPARATOR_SYMBOL);
+        let formula=Formula::from_string(string).unwrap();
+        let gotten=format!("{:?}",formula);
+        assert_eq!(gotten,expected);
+    }
 }
+
+#[cfg(test)]
+mod test_serialization{
+    use super::*;
+
+    #[test]
+    fn lone_variable(){
+        let expected="1".to_string();
+        let formula=Formula{
+            root: Node::Variable(1)
+        };
+        assert_eq!(expected,formula.to_string());
+    }
+
+    #[test]
+    fn lone_fresh_variable(){
+        let expected=format!("{}1",FRESH_VARIABLE_SYMBOL);
+        let formula=Formula{
+            root: Node::Variable(-1)
+        };
+        assert_eq!(expected,formula.to_string());
+    }
+
+    #[test]
+    fn lone_negation(){
+        let expected=format!("{}1",NEGATION_OPERATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::Not(
+                Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
+            )
+        };
+        assert_eq!(expected,formula.to_string());
+    }
+
+    #[test]
+    fn lone_negation_of_fresh_variable(){
+        let expected=format!("{}{}1",NEGATION_OPERATOR_SYMBOL,FRESH_VARIABLE_SYMBOL);
+        let formula=Formula{
+            root: Node::Not(
+                Rc::new(RefCell::new(Formula::new(Node::Variable(-1))))
+            )
+        };
+        assert_eq!(expected,formula.to_string());
+    }
+
+    #[test]
+    fn multiple_negations(){
+        let expected=format!("{}{}{}1",NEGATION_OPERATOR_SYMBOL,NEGATION_OPERATOR_SYMBOL,NEGATION_OPERATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::Not(
+                Rc::new(RefCell::new(Formula::new(Node::Not(
+                    Rc::new(RefCell::new(Formula::new(Node::Not(
+                        Rc::new(RefCell::new(Formula::new(Node::Variable(1))))
+                    ))))
+                ))))
+            )
+        };
+        assert_eq!(expected,formula.to_string());
+    }
+
+    #[test]
+    fn and_operator(){
+        let expected=format!("1{}2{}1{}3",AND_OPERATOR_SYMBOL,AND_OPERATOR_SYMBOL,AND_OPERATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::And(
+                vec![
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(1)))),
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(2)))),
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(1)))),
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(3)))) 
+                ]
+            )
+        };
+        assert_eq!(expected,formula.to_string());
+    }
+
+    #[test]
+    fn or_operator(){
+        let expected=format!("1{}2{}1{}3",OR_OPERATOR_SYMBOL,OR_OPERATOR_SYMBOL,OR_OPERATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::Or(
+                vec![
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(1)))),
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(2)))),
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(1)))),
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(3)))) 
+                ]
+            )
+        };
+        assert_eq!(expected,formula.to_string());
+    }
+
+    #[test]
+    fn xor_operator(){
+        let expected=format!("1{}2",XOR_OPERATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::Xor(
+                Rc::new(RefCell::new(Formula::new(Node::Variable(1)))),
+                Rc::new(RefCell::new(Formula::new(Node::Variable(2))))
+            )
+        };
+        assert_eq!(expected,formula.to_string());
+    }
+
+    #[test]
+    fn impl_operator(){
+        let expected=format!("1{}2",IMPL_OPERATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::Implies(
+                Rc::new(RefCell::new(Formula::new(Node::Variable(1)))),
+                Rc::new(RefCell::new(Formula::new(Node::Variable(2))))
+            )
+        };
+        assert_eq!(expected,formula.to_string());
+    }
+
+    #[test]
+    fn left_impl_operator(){
+        let expected=format!("1{}2",LEFT_IMPL_OPERATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::IsImpliedBy(
+                Rc::new(RefCell::new(Formula::new(Node::Variable(1)))),
+                Rc::new(RefCell::new(Formula::new(Node::Variable(2))))
+            )
+        };
+        assert_eq!(expected,formula.to_string());
+    }
+
+    #[test]
+    fn iff_operator(){
+        let expected=format!("1{}2",IFF_OPERATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::Iff(
+                Rc::new(RefCell::new(Formula::new(Node::Variable(1)))),
+                Rc::new(RefCell::new(Formula::new(Node::Variable(2))))
+            )
+        };
+        assert_eq!(expected,formula.to_string());
+    }
+
+    #[test]
+    fn nested_formula(){
+        let expected=format!("(1{}2){}(1{}2)",IFF_OPERATOR_SYMBOL,AND_OPERATOR_SYMBOL,XOR_OPERATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::And(
+                vec![Rc::new(RefCell::new(Formula::new(Node::Iff(
+                        Rc::new(RefCell::new(Formula::new(Node::Variable(1)))),
+                        Rc::new(RefCell::new(Formula::new(Node::Variable(2))))
+                    )))),
+                    Rc::new(RefCell::new(Formula::new(Node::Xor(
+                        Rc::new(RefCell::new(Formula::new(Node::Variable(1)))),
+                        Rc::new(RefCell::new(Formula::new(Node::Variable(2))))
+                    )))),
+                ]
+            )
+        };
+        assert_eq!(expected,formula.to_string()); 
+    }
+
+    #[test]
+    fn universal_quantifier_shallow(){
+        let expected=format!("{}1{}2",UNIVERSAL_QUANTIFIER_SYMBOL,QUANTIFIER_SEPARATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::ForEach(
+                1,
+                Rc::new(RefCell::new(Formula::new(Node::Variable(2))))
+            )
+        };
+        assert_eq!(expected,formula.to_string());        
+    }
+
+    #[test]
+    fn existential_quantifier_shallow(){
+        let expected=format!("{}1{}2",EXISTENTIAL_QUANTIFIER_SYMBOL,QUANTIFIER_SEPARATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::Exists(
+                1,
+                Rc::new(RefCell::new(Formula::new(Node::Variable(2))))
+            )
+        };
+        assert_eq!(expected,formula.to_string());        
+    }
+
+    #[test]
+    fn universal_quantifier_deep(){
+        let expected=format!("{}1{}(2{}3)",UNIVERSAL_QUANTIFIER_SYMBOL,QUANTIFIER_SEPARATOR_SYMBOL,IMPL_OPERATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::ForEach(
+                1,
+                Rc::new(RefCell::new(Formula::new(Node::Implies(
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(2)))),
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(3)))) 
+                ))))
+            )
+        };
+        assert_eq!(expected,formula.to_string());        
+    }
+
+    #[test]
+    fn existential_quantifier_deep(){
+        let expected=format!("{}1{}(2{}3)",EXISTENTIAL_QUANTIFIER_SYMBOL,QUANTIFIER_SEPARATOR_SYMBOL,IMPL_OPERATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::Exists(
+                1,
+                Rc::new(RefCell::new(Formula::new(Node::Implies(
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(2)))),
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(3)))) 
+                ))))
+            )
+        };
+        assert_eq!(expected,formula.to_string());          
+    }
+
+    #[test]
+    fn double_quantifier(){
+        let expected=format!("{}1{}{}2{}3",EXISTENTIAL_QUANTIFIER_SYMBOL,QUANTIFIER_SEPARATOR_SYMBOL,UNIVERSAL_QUANTIFIER_SYMBOL,QUANTIFIER_SEPARATOR_SYMBOL);
+        let formula=Formula{
+            root: Node::Exists(
+                1,
+                Rc::new(RefCell::new(Formula::new(Node::ForEach(
+                    2,
+                    Rc::new(RefCell::new(Formula::new(Node::Variable(3)))) 
+                ))))
+            )
+        };
+        assert_eq!(expected,formula.to_string());   
+    }
+}
+
