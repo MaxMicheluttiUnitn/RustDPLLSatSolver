@@ -1595,7 +1595,10 @@ impl Formula{
     pub fn to_string(&self)->String{
         let value=self.to_string_recursive();
         match self.root{
-            Node::Variable(_)|Node::True|Node::False|Node::Not(_)=>{
+            Node::Variable(_)|
+            Node::True|Node::False|
+            Node::Not(_)|
+            Node::Exists(_,_)|Node::ForEach(_,_)=>{
                 return value;
             },
             _=>{

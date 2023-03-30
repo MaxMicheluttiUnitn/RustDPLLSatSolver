@@ -6,7 +6,7 @@ mod operators;
 
 fn main() {
     //let string="-((1+2)=-(2*3))".to_string();
-    let string="-((--10))".to_string();
+    let string="A1.2".to_string();
     let parsed=match formula::BooleanFormula::from_string(string){
         Ok(formula)=>formula,
         Err(s)=>{
