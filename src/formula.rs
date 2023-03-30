@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::collections::HashSet;
 
 use crate::sat::{Literal, CNF, Clause};
-use crate::operators::{*};
+use crate::operators::*;
 
 #[derive(Debug)]
 pub struct BooleanFormula{
@@ -36,8 +36,7 @@ enum Node{
 
 impl BooleanFormula{
     pub fn new_default()->Self{
-        let formula=Formula::new_default();
-        Self::from_formula(formula)
+        Self::default()
     }
 
     pub fn to_string(&self)->String{
@@ -155,6 +154,19 @@ impl Clone for BooleanFormula{
     }
 }
 
+impl std::fmt::Display for BooleanFormula{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
+impl Default for BooleanFormula {
+    fn default() -> Self { 
+        let string=FALSE_ATOM_SYMBOL.to_string();
+        BooleanFormula::from_string(string).unwrap()
+    }
+}
+
 impl Formula{
     pub fn new(node:Node) -> Self{
         Formula{
@@ -163,9 +175,7 @@ impl Formula{
     }
 
     pub fn new_default() -> Self{
-        Formula{
-            root: Node::Variable(0)
-        }
+        Self::default()
     }
 
     pub fn from_string(s:String) -> Result<Self,String>{
@@ -1461,7 +1471,7 @@ impl Formula{
         };
     }
 
-    pub fn to_string(&self) -> String{
+    fn to_string_recursive(&self) -> String{
         let mut res:String="".to_string();
         match &self.root{
             Node::Variable(x)=>{
@@ -1484,64 +1494,64 @@ impl Formula{
             Node::And(vec)=>{
                 res.push_str("(");
                 for i in 0..(vec.len()-1){
-                    let token=(vec.get(i).unwrap().borrow()).to_string();
+                    let token=(vec.get(i).unwrap().borrow()).to_string_recursive();
                     res.push_str(&token);
                     res.push(AND_OPERATOR_SYMBOL);
                 }
-                let token=(vec.get(vec.len()-1).unwrap().borrow()).to_string();
+                let token=(vec.get(vec.len()-1).unwrap().borrow()).to_string_recursive();
                 res.push_str(&token);
                 res.push_str(")");
             },
             Node::Or(vec)=>{
                 res.push_str("(");
                 for i in 0..(vec.len()-1){
-                    let token=(vec.get(i).unwrap().borrow()).to_string();
+                    let token=(vec.get(i).unwrap().borrow()).to_string_recursive();
                     res.push_str(&token);
                     res.push(OR_OPERATOR_SYMBOL);
                 }
-                let token=(vec.get(vec.len()-1).unwrap().borrow()).to_string();
+                let token=(vec.get(vec.len()-1).unwrap().borrow()).to_string_recursive();
                 res.push_str(&token);
                 res.push_str(")");
             },
             Node::Xor(a,b)=>{
                 res.push_str("(");
-                let left_str=(a.borrow()).to_string();
+                let left_str=(a.borrow()).to_string_recursive();
                 res.push_str(&left_str);
                 res.push(XOR_OPERATOR_SYMBOL);
-                let right_str=(b.borrow()).to_string();
+                let right_str=(b.borrow()).to_string_recursive();
                 res.push_str(&right_str);
                 res.push_str(")");
             },
             Node::Iff(a,b)=>{
                 res.push_str("(");
-                let left_str=(a.borrow()).to_string();
+                let left_str=(a.borrow()).to_string_recursive();
                 res.push_str(&left_str);
                 res.push(IFF_OPERATOR_SYMBOL);
-                let right_str=(b.borrow()).to_string();
+                let right_str=(b.borrow()).to_string_recursive();
                 res.push_str(&right_str);
                 res.push_str(")");
             },
             Node::Implies(a,b)=>{
                 res.push_str("(");
-                let left_str=(a.borrow()).to_string();
+                let left_str=(a.borrow()).to_string_recursive();
                 res.push_str(&left_str);
                 res.push(IMPL_OPERATOR_SYMBOL);
-                let right_str=(b.borrow()).to_string();
+                let right_str=(b.borrow()).to_string_recursive();
                 res.push_str(&right_str);
                 res.push_str(")");
             },
             Node::IsImpliedBy(a,b)=>{
                 res.push_str("(");
-                let left_str=(a.borrow()).to_string();
+                let left_str=(a.borrow()).to_string_recursive();
                 res.push_str(&left_str);
                 res.push(LEFT_IMPL_OPERATOR_SYMBOL);
-                let right_str=(b.borrow()).to_string();
+                let right_str=(b.borrow()).to_string_recursive();
                 res.push_str(&right_str);
                 res.push_str(")");
             },
             Node::Not(a)=>{
                 res.push(NEGATION_OPERATOR_SYMBOL);
-                let for_str=(a.borrow()).to_string();
+                let for_str=(a.borrow()).to_string_recursive();
                 res.push_str(&for_str);
             },
             Node::Exists(x,f)=>{
@@ -1556,7 +1566,7 @@ impl Formula{
                     res.push_str(&str_var);
                 }
                 res.push(QUANTIFIER_SEPARATOR_SYMBOL);
-                let formula_string=(*f.borrow()).to_string();
+                let formula_string=(*f.borrow()).to_string_recursive();
                 res.push_str(&formula_string);
             },
             Node::ForEach(x,f)=>{
@@ -1571,12 +1581,27 @@ impl Formula{
                     res.push_str(&str_var);
                 }
                 res.push(QUANTIFIER_SEPARATOR_SYMBOL);
-                let formula_string=(*f.borrow()).to_string();
+                let formula_string=(*f.borrow()).to_string_recursive();
                 res.push_str(&formula_string);
             }
         }
         return res;
     } 
+
+    pub fn to_string(&self)->String{
+        let value=self.to_string_recursive();
+        match self.root{
+            Node::Variable(_)|Node::True|Node::False|Node::Not(_)=>{
+                return value;
+            },
+            _=>{
+                let mut chars = value.chars();
+                chars.next();
+                chars.next_back();
+                return chars.as_str().to_string();
+            }
+        }
+    }
 
     pub fn to_cnf_representation(&self)->CNF{
         if !self.is_cnf(){
@@ -1650,5 +1675,18 @@ impl Clone for Formula{
     fn clone(&self)->Self{
         let string=self.to_string();
         Self::from_string(string).unwrap()
+    }
+}
+
+impl std::fmt::Display for Formula{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
+impl Default for Formula {
+    fn default() -> Self { 
+        let string=FALSE_ATOM_SYMBOL.to_string();
+        Formula::from_string(string).unwrap()
     }
 }
