@@ -1,4 +1,11 @@
 pub const AND_OPERATOR_SYMBOL:char='+';
+/*
+ * WARNING
+ *  
+ * Always make these symbols different from each other.
+ * Same symbols with different meanings might end up
+ * in inconsistent behaviour by the parser
+ */
 pub const OR_OPERATOR_SYMBOL:char='*';
 pub const XOR_OPERATOR_SYMBOL:char='%';
 pub const IFF_OPERATOR_SYMBOL:char='=';
